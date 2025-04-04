@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/billmart_interview.iml" filepath="$PROJECT_DIR$/billmart_interview.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/billmart_interview_android.iml" filepath="$PROJECT_DIR$/android/billmart_interview_android.iml" />
+    </modules>
+  </component>
+</project>
