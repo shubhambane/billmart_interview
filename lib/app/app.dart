@@ -10,20 +10,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'User List Demo',
-      themeMode: ThemeMode.system,
-      darkTheme: ThemeData.dark(),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurpleAccent,
+    return BlocProvider(
+      create: (context) => UserBloc(UserRepository())..add(FetchUsers()),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Shubham Bill Mart',
+        themeMode: ThemeMode.system,
+        darkTheme: ThemeData.dark(),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurpleAccent,
+          ),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
-      ),
-      home: BlocProvider(
-        create: (context) => UserBloc(UserRepository())..add(FetchUsers()),
-        child: const UserListScreen(),
+        home: const UserListScreenWithBloc(),
       ),
     );
   }

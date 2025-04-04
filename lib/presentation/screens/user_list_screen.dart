@@ -1,8 +1,9 @@
+import 'package:billmart_interview/presentation/bloc/user_bloc.dart'
+    as presentation_bloc;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../../bloc/user_bloc.dart';
 import 'user_details_screen.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -12,18 +13,63 @@ class UserListScreen extends StatefulWidget {
   State<UserListScreen> createState() => _UserListScreenState();
 }
 
+// Create a wrapper StatelessWidget to provide the UserBloc
+class UserListScreenWithBloc extends StatelessWidget {
+  const UserListScreenWithBloc({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<presentation_bloc.UserBloc>(
+      create: (context) =>
+          presentation_bloc.UserBloc()..add(presentation_bloc.FetchUsers()),
+      child: const UserListScreen(),
+    );
+  }
+}
+
 class _UserListScreenState extends State<UserListScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= maxScroll * 0.9) {
+      final state = context.read<presentation_bloc.UserBloc>().state;
+      if (state is presentation_bloc.UserLoaded &&
+          !state.hasReachedMax &&
+          state is! presentation_bloc.UserLoadingMore) {
+        context
+            .read<presentation_bloc.UserBloc>()
+            .add(presentation_bloc.LoadMoreUsers());
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: BlocBuilder<UserBloc, UserState>(
+      body:
+          BlocBuilder<presentation_bloc.UserBloc, presentation_bloc.UserState>(
         builder: (context, state) {
-          if (state is UserInitial || state is UserLoading) {
+          if (state is presentation_bloc.UserInitial ||
+              state is presentation_bloc.UserLoading) {
             return _buildLoadingState();
-          } else if (state is UserLoaded) {
+          } else if (state is presentation_bloc.UserLoaded) {
             return _buildLoadedState(context, state);
-          } else if (state is UserError) {
+          } else if (state is presentation_bloc.UserError) {
             return _buildErrorState(context, state.message);
           } else {
             return const Center(child: Text('Unknown state'));
@@ -46,67 +92,91 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildLoadedState(BuildContext context, UserLoaded state) {
+  Widget _buildLoadedState(
+      BuildContext context, presentation_bloc.UserLoaded state) {
     final userResponse = state.userResponse;
-    final currentPage = state.currentPage;
-    final totalPages = state.userResponse.totalPages;
+    final isLoadingMore = state is presentation_bloc.UserLoadingMore;
 
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<UserBloc>().add(RefreshUsers());
+        context
+            .read<presentation_bloc.UserBloc>()
+            .add(presentation_bloc.RefreshUsers());
       },
       child: CustomScrollView(
+        controller: _scrollController,
         shrinkWrap: true,
         slivers: [
           SliverAppBar.medium(
             title: const Text('User List'),
             pinned: true,
             actions: [
-              _buildPaginationControls(context, currentPage, totalPages),
               IconButton(
                 tooltip: 'Refresh users',
                 icon: const Icon(Symbols.refresh),
                 onPressed: () {
-                  context.read<UserBloc>().add(RefreshUsers());
+                  context
+                      .read<presentation_bloc.UserBloc>()
+                      .add(presentation_bloc.RefreshUsers());
                 },
               ),
             ],
           ),
           SliverPadding(
             padding: const EdgeInsets.all(8.0),
-            sliver: SliverList(
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 8.0,
+                mainAxisSpacing: 8.0,
+              ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final user = userResponse.data[index];
                   return Card(
-                    margin: const EdgeInsets.only(bottom: 8.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(12.0),
-                      leading: Hero(
-                        tag: user.id,
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundImage: NetworkImage(user.avatar),
-                          onBackgroundImageError: (_, __) =>
-                              const Icon(Symbols.error),
-                        ),
-                      ),
-                      title: Text(
-                        '${user.firstName} ${user.lastName}',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      subtitle: Text(
-                        user.email,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      trailing: const Icon(Symbols.chevron_right),
+                    child: InkWell(
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => UserDetailsScreen(user: user),
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Hero(
+                              tag: user.id,
+                              child: CircleAvatar(
+                                radius: 45,
+                                backgroundImage: NetworkImage(user.avatar),
+                                onBackgroundImageError: (_, __) =>
+                                    const Icon(Symbols.error),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${user.firstName} ${user.lastName}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user.email,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -116,30 +186,17 @@ class _UserListScreenState extends State<UserListScreen> {
               ),
             ),
           ),
+          if (isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPaginationControls(
-      BuildContext context, int currentPage, int totalPages) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Symbols.arrow_back),
-          onPressed: currentPage > 1
-              ? () => context.read<UserBloc>().add(PreviousPage())
-              : null,
-        ),
-        Text('$currentPage / $totalPages'),
-        IconButton(
-          icon: const Icon(Symbols.arrow_forward),
-          onPressed: currentPage < totalPages
-              ? () => context.read<UserBloc>().add(NextPage())
-              : null,
-        ),
-      ],
     );
   }
 
@@ -162,7 +219,9 @@ class _UserListScreenState extends State<UserListScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              context.read<UserBloc>().add(FetchUsers());
+              context
+                  .read<presentation_bloc.UserBloc>()
+                  .add(presentation_bloc.FetchUsers());
             },
             child: const Text('Try Again'),
           ),
