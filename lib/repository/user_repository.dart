@@ -7,9 +7,9 @@ import '../models/user_model.dart';
 class UserRepository {
   final String baseUrl = 'https://reqres.in/api';
 
-  Future<UserResponse> getUsers() async {
+  Future<UserResponse> getUsers({int page = 1}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/users?per_page=12'));
+      final response = await http.get(Uri.parse('$baseUrl/users?page=$page'));
       if (response.statusCode == 200) {
         return UserResponse.fromJson(json.decode(response.body));
       } else {

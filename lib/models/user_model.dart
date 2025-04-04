@@ -64,6 +64,7 @@ class UserResponse {
   final int total;
   final int totalPages;
   final List<User> data;
+  final Support support;
 
   UserResponse({
     required this.page,
@@ -71,6 +72,7 @@ class UserResponse {
     required this.total,
     required this.totalPages,
     required this.data,
+    required this.support,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -79,9 +81,8 @@ class UserResponse {
       perPage: json['per_page'],
       total: json['total'],
       totalPages: json['total_pages'],
-      data: (json['data'] as List)
-          .map((userJson) => User.fromJson(userJson))
-          .toList(),
+      data: (json['data'] as List).map((e) => User.fromJson(e)).toList(),
+      support: Support.fromJson(json['support']),
     );
   }
 }
